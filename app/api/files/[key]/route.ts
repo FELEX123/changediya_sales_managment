@@ -1,0 +1,2 @@
+import {env} from 'cloudflare:workers';import {isStaff,privateHeaders} from '@/lib/security';
+export async function GET(req:Request,{params}:{params:Promise<{key:string}>}){if(!isStaff(req))return new Response(null,{status:401});const {key}=await params;const file=await env.BUCKET!.get(key);if(!file)return new Response(null,{status:404});return new Response(file.body,{headers:{...privateHeaders,'Content-Type':file.httpMetadata?.contentType||'application/octet-stream','Content-Security-Policy':"default-src 'none'; sandbox"}})}
