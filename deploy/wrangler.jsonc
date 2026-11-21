@@ -1,0 +1,9 @@
+{
+  "name": "changediya-vercel-api",
+  "main": "api.ts",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{"binding":"DB","database_name":"changediya-vercel-orders-c19e7b","migrations_dir":"../drizzle"}],
+  "r2_buckets": [{"binding":"BUCKET","bucket_name":"changediya-vercel-rx-c19e7b"}]
+}
+

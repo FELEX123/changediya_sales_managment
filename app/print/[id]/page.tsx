@@ -1,17 +1,8 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
 import {useParams} from 'next/navigation';
-import {waitForPrintImage} from '@/lib/print-ready';
-import {readBatchIds} from '@/lib/print-batch';
-import {PrescriptionSheets} from '@/components/PrescriptionSheets';
-export default function Print(){
- const params=useParams();const [orders,setOrders]=useState<any[]|null>(null),[error,setError]=useState(''),[density,setDensity]=useState(6),[ready,setReady]=useState(false),[sending,setSending]=useState(false);const printed=useRef(false);
- useEffect(()=>{fetch('/api/pharmacy').then(async r=>{if(!r.ok)throw Error('Staff session expired. Return to the pharmacy and sign in again.');const rows:any=await r.json();const ids=params.id==='batch'?readBatchIds(location.search):[params.id];const items=ids.map((id:any)=>rows.find((o:any)=>o.id===id));if(items.some((o:any)=>!o))throw Error('One or more requests are unavailable. Return to the pharmacy and refresh.');setOrders(items)}).catch(e=>setError(e.message))},[params.id]);
- useEffect(()=>{if(!orders)return;let cancelled=false;setReady(false);async function prepare(){await Promise.all(Array.from(document.images).map(waitForPrintImage));await document.fonts.ready;await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));if(cancelled)return;if(Array.from(document.querySelectorAll('.a4-sheet')).some(el=>el.scrollHeight>el.clientHeight+2))throw Error('These details exceed the sheet space. Shorten the delivery note before printing.');setReady(true);if(new URLSearchParams(location.search).has('auto')&&!printed.current){printed.current=true;window.print();window.parent.postMessage({type:'print-attempt'},location.origin)}}prepare().catch(e=>{if(!cancelled){setError(e.message);window.parent.postMessage({type:'print-attempt'},location.origin)}});return()=>{cancelled=true}},[orders,density]);
- async function printAll(){if(!orders)return;setSending(true);try{const r=await fetch('/api/pharmacy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim_many',ids:orders.map(o=>o.id)})});if(!r.ok)throw Error('Could not update the print queue. Return to the pharmacy and sign in again.');window.print()}catch(e){setError(String(e))}finally{setSending(false)}}
- const back=<a className="preview-back" href="/pharmacy">← Back to pharmacy</a>;
- if(error)return <div className="card preview-error">{back}<p className="error">{error}</p><button className="primary" onClick={()=>location.reload()}>Retry loading</button></div>;
- if(!orders)return <div className="card">{back}<p>Preparing A4 print sheets…</p></div>;
- const count=orders.reduce((n,o)=>n+JSON.parse(o.files).filter((f:any)=>f.kind==='page').length,0);const sheets=orders.reduce((n,o)=>n+Math.ceil(JSON.parse(o.files).filter((f:any)=>f.kind==='page').length/density),0);
- return <div className="compact-print-document"><div className="print-tools">{back}<div className="print-toolbar"><button disabled={!ready||sending} onClick={printAll}>{sending?'Preparing print…':ready?`Print ${orders.length>1?'all '+orders.length+' requests':'A4 sheets'}`:'Preparing images…'}</button><label>Print layout<select value={density} onChange={e=>setDensity(Number(e.target.value))}><option value={6}>Automatic · minimum sheets</option><option value={4}>Larger text · up to 4</option><option value={2}>Larger · up to 2</option><option value={1}>Largest · 1</option></select></label><strong>{orders.length} {orders.length===1?'request':'requests'} · {count} images → {sheets} A4 {sheets===1?'sheet':'sheets'}</strong></div><p>Each patient starts on a separate sheet with their own parcel label. Print A4 at 100% scale with browser headers/footers off. Check medicine text is readable; choose larger text if needed.</p></div>{orders.map(o=><PrescriptionSheets key={o.id} order={o} density={density}/>)}</div>
+import PrintView from '@/components/PrintView';
+
+export default function Print() {
+  const {id} = useParams<{id:string}>();
+  return <PrintView id={id}/>;
 }
